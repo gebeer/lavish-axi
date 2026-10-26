@@ -1393,13 +1393,17 @@ function syncAnnotationViewport() {
   const rect = frame.getBoundingClientRect();
   const viewport = window.visualViewport;
   const top = viewport ? viewport.offsetTop : 0;
-  const bottom = top + (viewport ? viewport.height : window.innerHeight);
+  const mobile = isMobileSheet();
+  // Reserve the dock, including safe-area padding. Its top can still reflect the
+  // previous --vv-height during keyboard resize; its height is independent of that.
+  const dockHeight = mobile ? panelHead.getBoundingClientRect().height : 0;
+  const bottom = top + (viewport ? viewport.height : window.innerHeight) - dockHeight;
   if (!Number.isFinite(bottom) || !Number.isFinite(rect.height)) return;
   const visibleTop = Math.max(rect.top, top);
   postToFrame({
     type: "lavish:annotationViewport",
     artifact_load_token: artifactLoadToken,
-    mobile: isMobileSheet(),
+    mobile,
     top: Math.max(0, Math.min(rect.height, visibleTop - rect.top)),
     height: Math.max(0, Math.min(rect.bottom, bottom) - visibleTop),
   });

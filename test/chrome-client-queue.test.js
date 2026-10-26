@@ -319,6 +319,7 @@ async function createChromeHarness({
   element("lavish-session").textContent = JSON.stringify(sessionData);
   const frame = element("artifact");
   frame.getBoundingClientRect = () => ({ top: 60, bottom: 800, height: 740 });
+  element("panelHead").getBoundingClientRect = () => ({ top: 740, bottom: 800, height: 60 });
   frame.dataset.artifactSrc = artifactSrc;
   Object.defineProperty(frame, "src", {
     get() {
@@ -680,23 +681,36 @@ test("chrome relays the top-level visible frame intersection on keyboard resize 
   const latest = () => chrome.postedToFrame.filter((msg) => msg.type === "lavish:annotationViewport").at(-1);
   assert.ok(latest(), "frame load relays geometry before restoring any draft");
   assert.equal(latest().top, 0);
-  assert.equal(latest().height, 700);
+  assert.equal(latest().height, 640, "the visible frame ends above the collapsed dock");
   assert.equal(latest().mobile, true);
   assert.equal(latest().artifact_load_token, chrome.artifactLoadToken());
   viewport.height = 300;
   viewport.offsetTop = 100;
   listeners.get("resize")();
   assert.equal(latest().top, 40);
-  assert.equal(latest().height, 300);
+  assert.equal(latest().height, 240);
   viewport.offsetTop = 140;
   listeners.get("scroll")();
   assert.equal(latest().top, 80);
   chrome.frame.getBoundingClientRect = () => ({ top: 180, bottom: 800, height: 620 });
   chrome.dispatchWindow("scroll");
   assert.equal(latest().top, 0);
-  assert.equal(latest().height, 260);
+  assert.equal(latest().height, 200);
+
+  // During a keyboard resize the dock's top may still reflect the old CSS vv-height.
+  // Its measured height (including safe-area padding) remains usable immediately.
+  viewport.height = 430;
+  viewport.offsetTop = 0;
+  chrome.frame.getBoundingClientRect = () => ({ top: 56, bottom: 784, height: 728 });
+  chrome.element("panelHead").getBoundingClientRect = () => ({ top: 784, bottom: 844, height: 60 });
+  listeners.get("resize")();
+  assert.equal(latest().height, 314, "keyboard bottom 430 minus dock 60 minus frame top 56");
+  chrome.element("panelHead").getBoundingClientRect = () => ({ top: 764, bottom: 844, height: 80 });
+  listeners.get("resize")();
+  assert.equal(latest().height, 294, "safe-area padding is included in the dock reservation");
   chrome.setMobile(false);
   assert.equal(latest().mobile, false, "desktop is not inferred from the artifact frame width");
+  assert.equal(latest().height, 374, "desktop reserves no conversation dock");
 });
 
 test("chrome client carries live events over a WebSocket outside the HTTP connection pool", async () => {
