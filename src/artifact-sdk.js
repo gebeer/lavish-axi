@@ -2337,15 +2337,12 @@ export function createArtifactSdk(
     root.appendChild(card);
 
     // The opaque iframe cannot see the top-level keyboard viewport. Chrome relays
-    // its intersection with this frame; use local geometry only until that arrives.
+    // its intersection with this frame; cards keep desktop placement until it arrives.
     // Desktop retains its anchored placement. Phone cards start at the visible top
     // and scroll internally when attachments or the keyboard leave too little room.
     function positionCard() {
-      const mobile = annotationViewport ? annotationViewport.mobile : window.innerWidth <= 860;
-      const viewport = annotationViewport || {
-        top: window.visualViewport?.offsetTop || 0,
-        height: window.visualViewport?.height || window.innerHeight,
-      };
+      const viewport = annotationViewport;
+      const mobile = viewport?.mobile === true;
       card.style.maxHeight = mobile ? Math.max(0, viewport.height - 24) + "px" : "";
       card.style.overflowY = mobile ? "auto" : "";
       const left = Math.min(Math.max(12, rect.left), window.innerWidth - card.offsetWidth - 12);
@@ -2358,16 +2355,11 @@ export function createArtifactSdk(
     positionActiveCard = positionCard;
     window.addEventListener("resize", positionCard);
     window.addEventListener("scroll", positionCard);
-    const visualViewport = window.visualViewport;
-    visualViewport?.addEventListener("resize", positionCard);
-    visualViewport?.addEventListener("scroll", positionCard);
     const cardObserver = new ResizeObserver(positionCard);
     cardObserver.observe(card);
     cleanUpCardLayout = () => {
       window.removeEventListener("resize", positionCard);
       window.removeEventListener("scroll", positionCard);
-      visualViewport?.removeEventListener("resize", positionCard);
-      visualViewport?.removeEventListener("scroll", positionCard);
       cardObserver.disconnect();
     };
     positionCard();
